@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createAuthClient } from '@/lib/supabase/auth-client'
 import { randomBytes } from 'crypto'
 
 const SESSION_COOKIE_NAME = 'session_token'
@@ -37,7 +38,8 @@ function generateSessionToken(): string {
  * Buat session baru untuk user
  */
 export async function createSession(userId: string): Promise<string> {
-  const supabase = await createClient()
+  // Gunakan auth client untuk bypass RLS
+  const supabase = createAuthClient()
   const sessionToken = generateSessionToken()
   const expiresAt = new Date(Date.now() + SESSION_DURATION)
 
@@ -79,7 +81,8 @@ export async function validateSession(): Promise<SessionUser | null> {
     return null
   }
 
-  const supabase = await createClient()
+  // Gunakan auth client untuk bypass RLS
+  const supabase = createAuthClient()
 
   // Ambil session dari database
   const { data: session, error: sessionError } = await supabase
@@ -152,7 +155,8 @@ export async function deleteSession(sessionToken?: string): Promise<void> {
     return
   }
 
-  const supabase = await createClient()
+  // Gunakan auth client untuk bypass RLS
+  const supabase = createAuthClient()
 
   // Hapus dari database
   await supabase.from('sessions').delete().eq('session_token', token)
@@ -165,7 +169,8 @@ export async function deleteSession(sessionToken?: string): Promise<void> {
  * Hapus semua session yang expired (cleanup job)
  */
 export async function cleanupExpiredSessions(): Promise<void> {
-  const supabase = await createClient()
+  // Gunakan auth client untuk bypass RLS
+  const supabase = createAuthClient()
   const now = new Date().toISOString()
 
   await supabase.from('sessions').delete().lt('expires_at', now)

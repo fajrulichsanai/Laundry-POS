@@ -120,30 +120,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Info Footer */}
-          <div className="mt-8 pt-6 border-t border-slate-100">
-            <p className="text-center text-sm text-slate-600 mb-3">
-              Demo Credentials
-            </p>
-            <div className="bg-slate-50 rounded-lg p-4 space-y-2 text-xs text-slate-600">
-              <div className="flex justify-between">
-                <span className="font-medium">Admin:</span>
-                <span className="font-mono">admin@laundry.com / admin123</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Kasir:</span>
-                <span className="font-mono">kasir@laundry.com / kasir123</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Additional Info */}
-        <div className="text-center mt-6">
-          <p className="text-sm text-slate-500">
-            Session akan berlaku selama 7 hari
-          </p>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
 const SESSION_COOKIE_NAME = 'session_token'
 
@@ -15,18 +15,15 @@ export async function middleware(request: NextRequest) {
   let isAuthenticated = false
 
   if (sessionToken) {
-    // Validasi session di database
-    const supabase = createServerClient(
+    // Gunakan service role key untuk bypass RLS di middleware
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
-        cookies: {
-          get(name: string) {
-            return request.cookies.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
       }
     )
 
@@ -43,9 +40,9 @@ export async function middleware(request: NextRequest) {
 
       if (now <= expiresAt) {
         // Session masih valid, cek apakah user masih aktif
-        const { data: user } = await supabase
+        const { data: user, error: userError } = await supabase
           .from('users')
-          .select('id')
+          .select('id, email, role')
           .eq('id', session.user_id)
           .eq('active', true)
           .single()
