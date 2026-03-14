@@ -405,7 +405,7 @@ export default function POSPage() {
               </div>
               <button
                 onClick={() => setCurrentStep('cart')}
-                className="text-emerald-600 text-sm font-medium"
+                className="text-emerald-600 text-sm font-medium hover:underline"
               >
                 Lihat Detail →
               </button>
@@ -419,6 +419,78 @@ export default function POSPage() {
               <DollarSign size={20} />
               Proses Pembayaran
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Cart Detail - Mobile Only */}
+      {currentStep === 'cart' && (
+        <div className="md:hidden fixed inset-0 bg-black/50 flex items-end justify-center z-50">
+          <div className="bg-white rounded-t-3xl p-6 w-full max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">Detail Pesanan</h3>
+              <button
+                onClick={() => setCurrentStep('service')}
+                className="p-2 hover:bg-slate-100 rounded-lg"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {cart.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">
+                <ShoppingCart size={48} className="mx-auto mb-2 opacity-50" />
+                <p>Keranjang kosong</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3 mb-4">
+                  {cart.map((item, index) => (
+                    <div key={index} className="p-4 bg-slate-50 rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <div className="font-semibold text-base">{item.serviceName}</div>
+                          <div className="text-sm text-slate-600 mt-1">
+                            {item.weight} kg × Rp {item.pricePerKg.toLocaleString('id-ID')}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeFromCart(index)}
+                          className="text-red-500 hover:text-red-700 p-2"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-bold text-emerald-600">
+                          Rp {item.subtotal.toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-slate-200 pt-4 mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">Total</span>
+                    <span className="text-2xl font-bold text-emerald-600">
+                      Rp {total.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setCurrentStep('service')
+                    setShowPayment(true)
+                  }}
+                  className="w-full px-4 py-4 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold flex items-center justify-center gap-2 active:scale-95 transition"
+                >
+                  <DollarSign size={20} />
+                  Lanjut Pembayaran
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
