@@ -538,7 +538,7 @@ export default function TransactionsPage() {
                     {selectedTransaction.payment_method === 'cash' ? 'Tunai' :
                      selectedTransaction.payment_method === 'qris' ? 'QRIS' :
                      selectedTransaction.payment_method === 'transfer' ? 'Transfer' :
-                     selectedTransaction.payment_method === 'e-wallet' ? 'E-Wallet' :
+                     selectedTransaction.payment_method === 'saldo' ? 'Saldo Pelanggan' :
                      selectedTransaction.payment_method}
                   </span>
                 </div>

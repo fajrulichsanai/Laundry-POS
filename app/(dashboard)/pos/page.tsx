@@ -13,6 +13,7 @@ interface Customer {
   phone: string
   email?: string
   address?: string
+  balance?: number
 }
 
 interface Service {
@@ -51,7 +52,7 @@ export default function POSPage() {
   // Payment form
   const [payment, setPayment] = useState({
     paidAmount: 0,
-    paymentMethod: 'cash' as 'cash' | 'qris' | 'transfer' | 'e-wallet' | 'debit' | 'credit',
+    paymentMethod: 'cash' as 'cash' | 'qris' | 'transfer' | 'saldo',
     notes: ''
   })
 
@@ -157,6 +158,15 @@ export default function POSPage() {
     if (!currentUser) {
       alert('User tidak ditemukan')
       return
+    }
+
+    // Validate saldo payment
+    if (payment.paymentMethod === 'saldo') {
+      const customerBalance = selectedCustomer.balance || 0
+      if (payment.paidAmount > customerBalance) {
+        alert(`Saldo tidak cukup! Saldo: Rp ${customerBalance.toLocaleString('id-ID')}`)
+        return
+      }
     }
 
     setLoading(true)
@@ -605,6 +615,15 @@ export default function POSPage() {
                   >
                     50% DP
                   </button>
+                  {payment.paymentMethod === 'saldo' && selectedCustomer?.balance && selectedCustomer.balance > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPayment({...payment, paidAmount: Math.min(total, selectedCustomer.balance || 0)})}
+                      className="px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium"
+                    >
+                      Gunakan Saldo
+                    </button>
+                  )}
                 </div>
                 <div className="mt-2 text-sm">
                   <span className="text-orange-600 font-semibold">
@@ -616,23 +635,45 @@ export default function POSPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Metode Pembayaran</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {(['cash', 'qris', 'transfer', 'e-wallet'] as const).map(method => (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => setPayment({...payment, paymentMethod: method})}
-                      className={`px-4 py-2.5 rounded-lg border-2 transition font-medium ${
-                        payment.paymentMethod === method
-                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      {method === 'cash' ? 'Tunai' : 
-                       method === 'qris' ? 'QRIS' :
-                       method === 'transfer' ? 'Transfer' : 'E-Wallet'}
-                    </button>
-                  ))}
+                  {(['cash', 'qris', 'transfer', 'saldo'] as const).map(method => {
+                    const customerBalance = selectedCustomer?.balance || 0
+                    const isSaldo = method === 'saldo'
+                    const balanceInsufficient = isSaldo && payment.paidAmount > customerBalance
+                    
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setPayment({...payment, paymentMethod: method})}
+                        disabled={isSaldo && customerBalance === 0}
+                        className={`px-4 py-2.5 rounded-lg border-2 transition font-medium ${
+                          payment.paymentMethod === method
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                            : 'border-slate-200 hover:border-slate-300'
+                        } ${isSaldo && customerBalance === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {method === 'cash' ? 'Tunai' : 
+                         method === 'qris' ? 'QRIS' :
+                         method === 'transfer' ? 'Transfer' : 
+                         isSaldo ? (
+                           <div className="text-xs">
+                             <div>Saldo</div>
+                             <div className={balanceInsufficient ? 'text-red-600' : ''}>
+                               Rp {customerBalance.toLocaleString('id-ID')}
+                             </div>
+                           </div>
+                         ) : method}
+                      </button>
+                    )
+                  })}
                 </div>
+                {payment.paymentMethod === 'saldo' && (
+                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="text-xs text-blue-700">
+                      💡 Pembayaran akan langsung mengurangi saldo pelanggan
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 pt-2">

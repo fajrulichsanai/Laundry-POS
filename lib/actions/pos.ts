@@ -27,7 +27,7 @@ export interface CreateTransactionInput {
   items: CartItem[]
   totalAmount: number
   paidAmount: number
-  paymentMethod: 'cash' | 'qris' | 'transfer' | 'e-wallet' | 'debit' | 'credit'
+  paymentMethod: 'cash' | 'qris' | 'transfer' | 'saldo'
   notes?: string
 }
 
@@ -35,6 +35,36 @@ export async function createTransaction(input: CreateTransactionInput) {
   const supabase = createAuthClient()
 
   try {
+    // If payment method is saldo, validate and deduct balance
+    if (input.paymentMethod === 'saldo') {
+      // Get customer balance
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('balance')
+        .eq('id', input.customerId)
+        .single()
+
+      if (customerError) {
+        return { error: 'Gagal mengambil data pelanggan: ' + customerError.message }
+      }
+
+      const currentBalance = Number(customer.balance) || 0
+      if (input.paidAmount > currentBalance) {
+        return { error: `Saldo tidak cukup! Saldo: Rp ${currentBalance.toLocaleString('id-ID')}` }
+      }
+
+      // Deduct balance
+      const newBalance = currentBalance - input.paidAmount
+      const { error: updateError } = await supabase
+        .from('customers')
+        .update({ balance: newBalance })
+        .eq('id', input.customerId)
+
+      if (updateError) {
+        return { error: 'Gagal mengurangi saldo: ' + updateError.message }
+      }
+    }
+
     // Generate invoice number
     const invoiceNumber = generateInvoiceNumber()
 
