@@ -6,9 +6,7 @@ import { getCustomers, createCustomer, getServices, createTransaction, type Cart
 import { getCurrentUser } from '@/lib/actions/auth'
 import WeightInput from '@/components/pos/WeightInput'
 import PrintWhatsAppModal from '@/components/modal/PrintWhatsAppModal'
-import NetworkStatus from '@/components/network/NetworkStatus'
 import { printReceipt, sendWhatsApp, type ReceiptData } from '@/lib/utils/receipt'
-import { createOfflineTransaction } from '@/lib/offline/transactions'
 
 interface Customer {
   id: string
@@ -193,86 +191,40 @@ export default function POSPage() {
 
     setLoading(true)
 
-    try {
-      // Check if online
-      const isOnline = typeof navigator !== 'undefined' && navigator.onLine
-
-      if (isOnline) {
-        // Try online transaction first
-        const result = await createTransaction({
-          customerId: selectedCustomer.id,
-          userId: currentUser.id,
-          items: cart,
-          totalAmount: calculateTotal(),
-          paidAmount: payment.paidAmount,
-          paymentMethod: payment.paymentMethod,
-          notes: payment.notes
-        })
-
-        if (result.error) {
-          // If online fails, fallback to offline
-          console.warn('Online transaction failed, saving offline:', result.error)
-          const offlineResult = await createOfflineTransaction({
-            customerId: selectedCustomer.id,
-            userId: currentUser.id,
-            items: cart,
-            totalAmount: calculateTotal(),
-            paidAmount: payment.paidAmount,
-            paymentMethod: payment.paymentMethod,
-            notes: payment.notes
-          })
-
-          showTransactionSuccess(offlineResult.invoiceNumber, true)
-        } else if (result.transaction) {
-          // Online success
-          showTransactionSuccess(result.invoiceNumber!, false)
-        }
-      } else {
-        // Offline mode - save to IndexedDB
-        const offlineResult = await createOfflineTransaction({
-          customerId: selectedCustomer.id,
-          userId: currentUser.id,
-          items: cart,
-          totalAmount: calculateTotal(),
-          paidAmount: payment.paidAmount,
-          paymentMethod: payment.paymentMethod,
-          notes: payment.notes
-        })
-
-        showTransactionSuccess(offlineResult.invoiceNumber, true)
-      }
-    } catch (error) {
-      console.error('Transaction error:', error)
-      alert('Terjadi kesalahan saat menyimpan transaksi')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function showTransactionSuccess(invoiceNumber: string, isOffline: boolean) {
-    const estimatedDate = new Date()
-    estimatedDate.setDate(estimatedDate.getDate() + 3)
-
-    const receiptData: ReceiptData = {
-      invoiceNumber,
-      customerName: selectedCustomer!.name,
-      customerPhone: selectedCustomer!.phone,
+    const result = await createTransaction({
+      customerId: selectedCustomer.id,
+      userId: currentUser.id,
       items: cart,
       totalAmount: calculateTotal(),
       paidAmount: payment.paidAmount,
-      remaining: calculateRemaining(),
       paymentMethod: payment.paymentMethod,
-      createdAt: new Date(),
-      estimatedCompletion: estimatedDate
-    }
+      notes: payment.notes
+    })
 
-    // Show offline notice if saved offline
-    if (isOffline) {
-      alert(`✅ Transaksi tersimpan secara offline!\n\nInvoice: ${invoiceNumber}\n\nData akan otomatis sync ke server saat koneksi tersedia.`)
-    }
+    if (result.error) {
+      alert(result.error)
+      setLoading(false)
+    } else if (result.transaction) {
+      // Success - show print and WhatsApp options
+      const estimatedDate = new Date()
+      estimatedDate.setDate(estimatedDate.getDate() + 3)
 
-    // Show success modal
-    showSuccessModal(receiptData)
+      const receiptData: ReceiptData = {
+        invoiceNumber: result.invoiceNumber!,
+        customerName: selectedCustomer.name,
+        customerPhone: selectedCustomer.phone,
+        items: cart,
+        totalAmount: calculateTotal(),
+        paidAmount: payment.paidAmount,
+        remaining: calculateRemaining(),
+        paymentMethod: payment.paymentMethod,
+        createdAt: new Date(),
+        estimatedCompletion: estimatedDate
+      }
+
+      // Show success modal with options
+      showSuccessModal(receiptData)
+    }
   }
 
   function showSuccessModal(receiptData: ReceiptData) {
