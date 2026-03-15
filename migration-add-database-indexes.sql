@@ -38,10 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_customers_name_lower ON customers(LOWER(name));
 -- For phone number lookups
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 
--- For active customers filtering
-CREATE INDEX IF NOT EXISTS idx_customers_active ON customers(active) WHERE active = true;
-
--- For balance queries
+-- For balance queries (customers with positive balance)
 CREATE INDEX IF NOT EXISTS idx_customers_balance ON customers(balance) WHERE balance > 0;
 
 -- 4. SERVICES TABLE INDEXES
