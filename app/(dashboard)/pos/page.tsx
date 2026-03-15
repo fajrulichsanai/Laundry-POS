@@ -70,6 +70,21 @@ export default function POSPage() {
     }
   }, [searchTerm])
 
+  // Auto-set paidAmount when payment method is saldo
+  useEffect(() => {
+    if (payment.paymentMethod === 'saldo' && selectedCustomer && cart.length > 0) {
+      const total = calculateTotal()
+      const customerBalance = selectedCustomer.balance || 0
+      // Auto-set paidAmount to the amount that will be paid using balance
+      // Use minimum between total and available balance
+      const amountToPay = Math.min(total, customerBalance)
+      setPayment(prev => ({ ...prev, paidAmount: amountToPay }))
+    } else if (payment.paymentMethod !== 'saldo' && payment.paidAmount > 0) {
+      // Reset paidAmount when switching away from saldo
+      // Only if it was previously set
+    }
+  }, [payment.paymentMethod, selectedCustomer, cart])
+
   async function loadCurrentUser() {
     const user = await getCurrentUser()
     setCurrentUser(user)
@@ -644,7 +659,15 @@ export default function POSPage() {
                       <button
                         key={method}
                         type="button"
-                        onClick={() => setPayment({...payment, paymentMethod: method})}
+                        onClick={() => {
+                          if (method === 'saldo') {
+                            // Auto-set paidAmount when selecting saldo
+                            const amountToPay = Math.min(total, customerBalance)
+                            setPayment({...payment, paymentMethod: method, paidAmount: amountToPay})
+                          } else {
+                            setPayment({...payment, paymentMethod: method})
+                          }
+                        }}
                         disabled={isSaldo && customerBalance === 0}
                         className={`px-4 py-2.5 rounded-lg border-2 transition font-medium ${
                           payment.paymentMethod === method

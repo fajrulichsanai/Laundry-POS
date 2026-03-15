@@ -115,9 +115,11 @@ export interface Database {
           paid_amount: number
           payment_status: 'unpaid' | 'partial' | 'paid'
           order_status: 'processing' | 'done' | 'taken'
+          payment_method: string
           notes: string | null
           estimated_completion_date: string | null
           completed_at: string | null
+          pickup_date: string | null
           created_at: string
           updated_at: string
         }
@@ -130,9 +132,11 @@ export interface Database {
           paid_amount?: number
           payment_status?: 'unpaid' | 'partial' | 'paid'
           order_status?: 'processing' | 'done' | 'taken'
+          payment_method?: string
           notes?: string | null
           estimated_completion_date?: string | null
           completed_at?: string | null
+          pickup_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -145,9 +149,11 @@ export interface Database {
           paid_amount?: number
           payment_status?: 'unpaid' | 'partial' | 'paid'
           order_status?: 'processing' | 'done' | 'taken'
+          payment_method?: string
           notes?: string | null
           estimated_completion_date?: string | null
           completed_at?: string | null
+          pickup_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -191,6 +197,7 @@ export interface Database {
           description: string
           amount: number
           date: string
+          notes: string | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -201,6 +208,7 @@ export interface Database {
           description: string
           amount: number
           date: string
+          notes?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -211,6 +219,7 @@ export interface Database {
           description?: string
           amount?: number
           date?: string
+          notes?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string

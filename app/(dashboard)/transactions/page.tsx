@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Filter, X, Package, Printer, Send, Eye, Loader2 } from 'lucide-react'
-import { getTransactions, getTransactionDetail, type TransactionListItem } from '@/lib/actions/transactions'
+import { Search, Filter, X, Package, Printer, Send, Eye, Loader2, CheckCircle, CreditCard } from 'lucide-react'
+import { getTransactions, getTransactionDetail, pickupLaundry, addPayment, type TransactionListItem } from '@/lib/actions/transactions'
 import { printReceipt, sendWhatsApp, type ReceiptData } from '@/lib/utils/receipt'
 
 interface TransactionDetail {
@@ -36,6 +36,11 @@ export default function TransactionsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showFilter, setShowFilter] = useState(false)
+  
+  // Payment form states
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
 
   useEffect(() => {
     loadTransactions()
@@ -142,6 +147,78 @@ export default function TransactionsPage() {
       estimatedCompletion
     }
     sendWhatsApp(receiptData)
+  }
+
+  async function handlePickupLaundry(transactionId: string) {
+    // Confirm action
+    if (!confirm('Apakah yakin laundry sudah diambil oleh pelanggan?')) {
+      return
+    }
+
+    try {
+      const result = await pickupLaundry(transactionId)
+      
+      if (result.error) {
+        alert('❌ ' + result.error)
+      } else {
+        alert('✅ Laundry berhasil ditandai sudah diambil!')
+        setSelectedTransaction(null)
+        loadTransactions() // Reload list
+      }
+    } catch (error) {
+      console.error('Error processing pickup:', error)
+      alert('❌ Gagal memproses pengambilan laundry')
+    }
+  }
+
+  async function handlePayment(e: React.FormEvent) {
+    e.preventDefault()
+    
+    if (!selectedTransaction) return
+
+    const amount = parseFloat(paymentAmount)
+    
+    if (isNaN(amount) || amount <= 0) {
+      alert('⚠️ Jumlah pembayaran tidak valid')
+      return
+    }
+
+    const remaining = selectedTransaction.total_amount - selectedTransaction.paid_amount
+    
+    if (amount > remaining) {
+      alert(`⚠️ Jumlah pembayaran melebihi sisa tagihan (Rp ${remaining.toLocaleString('id-ID')})`)
+      return
+    }
+
+    try {
+      setIsProcessingPayment(true)
+      
+      const result = await addPayment(selectedTransaction.id, amount, paymentMethod)
+      
+      if (result.error) {
+        alert('❌ ' + result.error)
+      } else {
+        alert('✅ Pembayaran berhasil!')
+        setPaymentAmount('')
+        setPaymentMethod('cash')
+        
+        // Reload transaction details
+        await loadTransactionDetails(selectedTransaction.id)
+        loadTransactions() // Reload list
+      }
+    } catch (error) {
+      console.error('Error processing payment:', error)
+      alert('❌ Gagal memproses pembayaran')
+    } finally {
+      setIsProcessingPayment(false)
+    }
+  }
+
+  function handleSetRemainingAmount() {
+    if (selectedTransaction) {
+      const remaining = selectedTransaction.total_amount - selectedTransaction.paid_amount
+      setPaymentAmount(remaining.toString())
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -552,22 +629,123 @@ export default function TransactionsPage() {
                 </div>
               )}
 
+              {/* Payment Form (only show if not yet paid and not taken) */}
+              {selectedTransaction.payment_status !== 'paid' && selectedTransaction.order_status !== 'taken' && (
+                <form onSubmit={handlePayment} className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                  <div className="text-sm font-semibold text-blue-900 mb-2">💳 Tambah Pembayaran</div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Jumlah Bayar
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        placeholder="Masukkan jumlah"
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        required
+                        disabled={isProcessingPayment}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSetRemainingAmount}
+                        className="px-3 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm font-medium"
+                        disabled={isProcessingPayment}
+                      >
+                        Sisa
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Sisa: Rp {(selectedTransaction.total_amount - selectedTransaction.paid_amount).toLocaleString('id-ID')}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Metode Pembayaran
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['cash', 'qris', 'transfer', 'saldo'].map((method) => (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setPaymentMethod(method)}
+                          disabled={isProcessingPayment}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            paymentMethod === method
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {method === 'cash' ? 'Tunai' :
+                           method === 'qris' ? 'QRIS' :
+                           method === 'transfer' ? 'Transfer' :
+                           'Saldo'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isProcessingPayment}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium disabled:bg-slate-300 disabled:cursor-not-allowed"
+                  >
+                    {isProcessingPayment ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Memproses...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard size={18} />
+                        Bayar Sekarang
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+
               {/* Actions in Modal */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handlePrintReceipt(selectedTransaction)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium"
-                >
-                  <Printer size={18} />
-                  Print Struk
-                </button>
-                <button
-                  onClick={() => handleSendWhatsApp(selectedTransaction)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                >
-                  <Send size={18} />
-                  Kirim WA
-                </button>
+              <div className="flex flex-col gap-2">
+                {/* Pickup Button (only show if not yet taken and paid) */}
+                {selectedTransaction.order_status !== 'taken' && selectedTransaction.payment_status === 'paid' && (
+                  <button
+                    onClick={() => handlePickupLaundry(selectedTransaction.id)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium"
+                  >
+                    <CheckCircle size={18} />
+                    Ambil Laundry (Selesai Diambil)
+                  </button>
+                )}
+
+                {/* Show message if already taken */}
+                {selectedTransaction.order_status === 'taken' && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <p className="text-sm text-slate-700">
+                      ✅ Laundry sudah diambil
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handlePrintReceipt(selectedTransaction)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium"
+                  >
+                    <Printer size={18} />
+                    Print Struk
+                  </button>
+                  <button
+                    onClick={() => handleSendWhatsApp(selectedTransaction)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                  >
+                    <Send size={18} />
+                    Kirim WA
+                  </button>
+                </div>
               </div>
             </div>
           </div>
