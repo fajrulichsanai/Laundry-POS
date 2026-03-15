@@ -17,6 +17,7 @@ import {
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { logout } from '@/lib/actions/auth'
+import NetworkStatus from '@/components/network/NetworkStatus'
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -145,6 +146,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </div>
         </div>
       </main>
+
+      {/* Network Status Indicator */}
+      <NetworkStatus />
     </div>
   )
 }
