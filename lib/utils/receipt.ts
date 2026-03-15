@@ -19,25 +19,49 @@ export interface ReceiptData {
 }
 
 /**
- * Print thermal receipt
+ * Print thermal receipt - Mobile friendly version
+ * Uses iframe instead of popup window to avoid popup blockers
  */
 export function printReceipt(data: ReceiptData) {
   const receiptHTML = generateReceiptHTML(data)
   
-  // Open print window
-  const printWindow = window.open('', '_blank', 'width=300,height=600')
-  if (!printWindow) {
-    alert('Popup diblokir! Aktifkan popup untuk print.')
+  // Create iframe for printing
+  const printFrame = document.createElement('iframe')
+  printFrame.style.position = 'fixed'
+  printFrame.style.right = '0'
+  printFrame.style.bottom = '0'
+  printFrame.style.width = '0'
+  printFrame.style.height = '0'
+  printFrame.style.border = 'none'
+  
+  document.body.appendChild(printFrame)
+  
+  const frameDoc = printFrame.contentWindow?.document
+  if (!frameDoc) {
+    alert('Gagal membuka print preview')
+    document.body.removeChild(printFrame)
     return
   }
-
-  printWindow.document.write(receiptHTML)
-  printWindow.document.close()
   
-  // Auto print
+  frameDoc.open()
+  frameDoc.write(receiptHTML)
+  frameDoc.close()
+  
+  // Wait for content to load then print
   setTimeout(() => {
-    printWindow.print()
-    printWindow.close()
+    try {
+      printFrame.contentWindow?.focus()
+      printFrame.contentWindow?.print()
+      
+      // Remove iframe after printing
+      setTimeout(() => {
+        document.body.removeChild(printFrame)
+      }, 1000)
+    } catch (error) {
+      console.error('Print error:', error)
+      alert('Gagal print struk. Silakan coba lagi.')
+      document.body.removeChild(printFrame)
+    }
   }, 250)
 }
 
@@ -234,7 +258,8 @@ function generateReceiptHTML(data: ReceiptData): string {
 }
 
 /**
- * Send receipt to WhatsApp
+ * Send receipt to WhatsApp - Mobile friendly version
+ * Uses direct link instead of window.open to avoid popup blockers
  */
 export function sendWhatsApp(data: ReceiptData) {
   const message = generateWhatsAppMessage(data)
@@ -251,9 +276,12 @@ export function sendWhatsApp(data: ReceiptData) {
     }
   }
   
-  // Open WhatsApp with pre-filled message
+  // Create WhatsApp URL
   const whatsappURL = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-  window.open(whatsappURL, '_blank')
+  
+  // Use location.href for better mobile compatibility
+  // This prevents popup blockers on iOS
+  window.location.href = whatsappURL
 }
 
 /**

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Search, Filter, X, Package, Printer, Send, Eye, Loader2, CheckCircle, CreditCard } from 'lucide-react'
 import { getTransactions, getTransactionDetail, pickupLaundry, addPayment, type TransactionListItem } from '@/lib/actions/transactions'
+import PrintWhatsAppModal from '@/components/modal/PrintWhatsAppModal'
 import { printReceipt, sendWhatsApp, type ReceiptData } from '@/lib/utils/receipt'
 
 interface TransactionDetail {
@@ -41,6 +42,10 @@ export default function TransactionsPage() {
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  
+  // Modal state for print/WhatsApp
+  const [showPrintWhatsAppModal, setShowPrintWhatsAppModal] = useState(false)
+  const [modalReceiptData, setModalReceiptData] = useState<ReceiptData | null>(null)
 
   useEffect(() => {
     loadTransactions()
@@ -117,7 +122,10 @@ export default function TransactionsPage() {
       createdAt,
       estimatedCompletion
     }
-    printReceipt(receiptData)
+    
+    // Show modal instead of direct print
+    setModalReceiptData(receiptData)
+    setShowPrintWhatsAppModal(true)
   }
 
   function handleSendWhatsApp(transaction: TransactionListItem | TransactionDetail) {
@@ -146,7 +154,27 @@ export default function TransactionsPage() {
       createdAt,
       estimatedCompletion
     }
-    sendWhatsApp(receiptData)
+    
+    // Show modal instead of direct WhatsApp
+    setModalReceiptData(receiptData)
+    setShowPrintWhatsAppModal(true)
+  }
+  
+  function handleModalPrint() {
+    if (modalReceiptData) {
+      printReceipt(modalReceiptData)
+    }
+  }
+  
+  function handleModalWhatsApp() {
+    if (modalReceiptData) {
+      sendWhatsApp(modalReceiptData)
+    }
+  }
+  
+  function handleCloseModal() {
+    setShowPrintWhatsAppModal(false)
+    setModalReceiptData(null)
   }
 
   async function handlePickupLaundry(transactionId: string) {
@@ -750,6 +778,17 @@ export default function TransactionsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Print & WhatsApp Modal */}
+      {modalReceiptData && (
+        <PrintWhatsAppModal
+          isOpen={showPrintWhatsAppModal}
+          onClose={handleCloseModal}
+          receiptData={modalReceiptData}
+          onPrint={handleModalPrint}
+          onWhatsApp={handleModalWhatsApp}
+        />
       )}
     </div>
   )

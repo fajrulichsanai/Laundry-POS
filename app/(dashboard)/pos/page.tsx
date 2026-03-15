@@ -5,6 +5,7 @@ import { Search, Plus, ShoppingCart, Trash2, DollarSign, Check, Printer, Send, X
 import { getCustomers, createCustomer, getServices, createTransaction, type CartItem } from '@/lib/actions/pos'
 import { getCurrentUser } from '@/lib/actions/auth'
 import WeightInput from '@/components/pos/WeightInput'
+import PrintWhatsAppModal from '@/components/modal/PrintWhatsAppModal'
 import { printReceipt, sendWhatsApp, type ReceiptData } from '@/lib/utils/receipt'
 
 interface Customer {
@@ -40,6 +41,10 @@ export default function POSPage() {
   const [loading, setLoading] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [currentStep, setCurrentStep] = useState<Step>('customer')
+  
+  // Modal state
+  const [showPrintWhatsAppModal, setShowPrintWhatsAppModal] = useState(false)
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
 
   // New customer form
   const [newCustomer, setNewCustomer] = useState({
@@ -223,22 +228,28 @@ export default function POSPage() {
   }
 
   function showSuccessModal(receiptData: ReceiptData) {
-    const print = confirm(
-      `✅ Transaksi Berhasil!\n\nInvoice: ${receiptData.invoiceNumber}\n\nKlik OK untuk print struk, atau Cancel untuk lewati.`
-    )
+    setReceiptData(receiptData)
+    setShowPrintWhatsAppModal(true)
+  }
 
-    if (print) {
+  function handlePrintReceipt() {
+    if (receiptData) {
       printReceipt(receiptData)
     }
+  }
 
+  function handleSendWhatsApp() {
+    if (receiptData) {
+      sendWhatsApp(receiptData)
+    }
+  }
+
+  function handleCloseModal() {
+    setShowPrintWhatsAppModal(false)
+    // Reset form after modal closes
     setTimeout(() => {
-      const sendWA = confirm(`Kirim nota ke WhatsApp pelanggan?\n\n${receiptData.customerName}\n${receiptData.customerPhone}`)
-      if (sendWA) {
-        sendWhatsApp(receiptData)
-      }
-
-      // Reset form
       resetForm()
+      setReceiptData(null)
     }, 300)
   }
 
@@ -720,6 +731,17 @@ export default function POSPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Print & WhatsApp Modal */}
+      {receiptData && (
+        <PrintWhatsAppModal
+          isOpen={showPrintWhatsAppModal}
+          onClose={handleCloseModal}
+          receiptData={receiptData}
+          onPrint={handlePrintReceipt}
+          onWhatsApp={handleSendWhatsApp}
+        />
       )}
     </>
   )
